@@ -204,4 +204,8 @@ check "unwritable state dir allows"      allow "$(decision "$(read_json "$BIG")"
 # --- summary ----------------------------------------------------------------
 echo
 echo "passed: $PASS   failed: $FAIL"
-[ "$FAIL" -eq 0 ]
+[ "$FAIL" -eq 0 ] || exit 1
+
+# The reporter has its own fixtures; run them here so CI needs one entry point.
+echo
+bash "$ROOT/tests/report-tests.sh"
