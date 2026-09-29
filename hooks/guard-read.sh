@@ -107,6 +107,8 @@ if [ "$TOOL" = "Bash" ]; then
   case "$COMMAND" in
     *\|* | *\>*) allow "piped-or-redirected" ;;
   esac
+  # shellcheck disable=SC2016  # single quotes are deliberate: this is Python,
+  # and the $ inside belongs to a regex, not to the shell.
   BASH_VERDICT="$(python3 -c '
 import os, re, shlex, sys
 cmd = sys.argv[1]
