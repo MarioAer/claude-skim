@@ -20,6 +20,11 @@ MIN_LINES="${CLAUDE_PLUGIN_OPTION_MIN_LINES:-350}"
 MIN_BYTES="${CLAUDE_PLUGIN_OPTION_MIN_BYTES:-40000}"
 WORKER_NAME="bulk-reader"
 
+# A non-numeric option would break the arithmetic below and take the session
+# with it, so fall back rather than trust the value.
+case "$MIN_LINES" in '' | *[!0-9]*) MIN_LINES=350 ;; esac
+case "$MIN_BYTES" in '' | *[!0-9]*) MIN_BYTES=40000 ;; esac
+
 allow() {
   printf '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"%s"}}\n' "${1:-ok}"
   exit 0
@@ -113,7 +118,8 @@ except ValueError:
 if not parts:
     print("allow"); raise SystemExit
 prog = os.path.basename(parts[0])
-if prog not in ("cat", "head", "tail"):
+# less and more page a whole file into the transcript just as cat does
+if prog not in ("cat", "head", "tail", "less", "more"):
     print("allow"); raise SystemExit
 m = re.search(r"-n\s*(\d+)", cmd)
 if prog in ("head", "tail"):

@@ -22,9 +22,15 @@ SMALL="$WORK/small.ts"
 BIG="$WORK/big.ts"
 ONELINE="$WORK/bundle.min.js"
 BINARY="$WORK/blob.bin"
+AT="$WORK/at-threshold.ts"
+OVER="$WORK/over-threshold.ts"
 
 for i in $(seq 1 40); do echo "export const small${i} = ${i};"; done > "$SMALL"
 for i in $(seq 1 1200); do echo "export const big${i} = ${i}; // padding padding padding"; done > "$BIG"
+# exactly at and one past the 350-line threshold, kept under the byte limit so
+# the line rule is what is being tested
+for i in $(seq 1 350); do echo "const a${i}=${i};"; done > "$AT"
+for i in $(seq 1 351); do echo "const b${i}=${i};"; done > "$OVER"
 python3 -c "open('$ONELINE','w').write('var x=' + 'a'*60000 + ';')"
 python3 -c "open('$BINARY','wb').write(b'\x7fELF' + bytes(range(256))*40)"
 
@@ -99,6 +105,24 @@ check "oversized file denies"            deny  "$(decision "$(read_json "$BIG")"
 
 fresh
 check "small file allows"                allow "$(decision "$(read_json "$SMALL")")"
+
+fresh
+check "exactly at threshold allows"      allow "$(decision "$(read_json "$AT")")"
+
+fresh
+check "one line over threshold denies"   deny  "$(decision "$(read_json "$OVER")")"
+
+fresh
+check "less of oversized denies"         deny  "$(decision "$(bash_json "less $BIG")")"
+
+fresh
+check "more of oversized denies"         deny  "$(decision "$(bash_json "more $BIG")")"
+
+fresh
+CLAUDE_PLUGIN_OPTION_MIN_LINES=garbage
+export CLAUDE_PLUGIN_OPTION_MIN_LINES
+check "non-numeric threshold falls back" deny  "$(decision "$(read_json "$BIG")")"
+unset CLAUDE_PLUGIN_OPTION_MIN_LINES
 
 fresh
 check "bounded read under budget allows" allow "$(decision "$(read_json "$BIG" 100)")"

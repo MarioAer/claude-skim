@@ -84,5 +84,4 @@ in [`docs/mechanisms.md`](docs/mechanisms.md).
 
 ## License
 
-Apache-2.0. Prior art: Spotify's `shunt` plugin established the pattern of a
-read-blocking hook plus a cheap worker model.
+Apache-2.0.

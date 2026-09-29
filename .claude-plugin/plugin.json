@@ -7,5 +7,11 @@
   "author": {
     "name": "Mario Erazo",
     "url": "https://github.com/MarioAer"
-  }
+  },
+  "keywords": [
+    "token-optimization",
+    "context-management",
+    "model-routing",
+    "delegation"
+  ]
 }
