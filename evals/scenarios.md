@@ -72,3 +72,40 @@ answer is a property five of them share.
 `unlinkDigest`, `emitShard`. Each calls `cache.set` at the top level of the
 function body instead of inside `withLock(key, ...)`, and each carries a
 "fast path, avoids lock contention" comment. The other 45 are correct.
+
+---
+
+## Scenario 4 — one question across three large files
+
+The case with the strongest argument for delegation: the answer needs
+`retry_policy.ts` (1,483 lines), `store.ts` (800) and `circuit_breaker.ts`
+(701), so reading everything costs roughly 2,984 lines instead of one file's
+worth. If delegation does not win here it does not win anywhere.
+
+> You are working in the gateway service checked out at `<CORPUS>`
+>
+> Post-incident review. Three subsystems each claim to enforce a limit: the
+> retry budget in src/gateway/retry_policy.ts, the per-key lock in
+> src/session/store.ts, and the circuit breaker in
+> src/gateway/circuit_breaker.ts.
+>
+> For each of the three, tell me whether it actually enforces its limit or is
+> effectively a no-op, and cite the specific code that decides it.
+
+**Answer key:** all three fail, each differently, and a correct answer
+distinguishes them.
+
+| Subsystem | Verdict | Deciding code |
+| --- | --- | --- |
+| Retry budget | No-op | `BudgetEnforcer.consumed` is initialised to 0 and never incremented, so `permit()` always evaluates `0 < allowed` |
+| Session lock | Not enforced | Five of 50 functions skip `withLock` outright. In the other 45, `cache.get` runs *before* the lock is taken, so the lock serialises only the write and the read-modify-write still races |
+| Circuit breaker | No-op | `allow()` sets `this.failures = 0` on every check, so `recordFailure` can never accumulate to `failureThreshold` |
+
+Scoring: three of three verdicts correct, with the deciding line cited for
+each. An answer that finds two and misses one is a partial, not a pass.
+
+> The lock entry was originally written as "partial — 45 of 50 are correct".
+> That was wrong, and the benchmark found it: four of five repetitions
+> independently reported that the pre-lock read makes all 50 racy. An answer
+> key is a hypothesis, not an authority — when repetitions disagree with it,
+> check the fixture before marking them down.

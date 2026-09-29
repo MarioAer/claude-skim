@@ -28,7 +28,28 @@ Two arms per scenario:
 - **Baseline** — the prompt alone. No mention of reading strategy, delegation,
   context, or tokens. Any such hint contaminates the baseline.
 - **With skill** — the same prompt, preceded by an instruction to read and
-  follow `skills/reading-large-files/SKILL.md`.
+  follow the skill.
+
+### Run both arms from a tree that has no answers in it
+
+**Copy the corpus and `SKILL.md` somewhere outside this repository and point
+both arms at that copy.** Pointing an arm at `SKILL.md` in its normal location
+hands it a path into `evals/`, where `scenarios.md` holds the answer keys and
+the generators show exactly where each defect was planted.
+
+This is not hypothetical. On the first run of scenario 4 the skill arm was
+given the in-repo path and all five repetitions opened the answer key, while
+the baseline arm — which only ever received the corpus directory — did not. The
+whole comparison had to be discarded and re-run.
+
+Verify afterwards rather than assuming, by checking what the agents actually
+opened rather than what they said they did:
+
+```bash
+grep -l "scenarios.md\|gen-corpus\|gen-crossfile" <transcript>...
+```
+
+An arm whose repetitions touched any of those is void.
 
 Then score the transcripts:
 

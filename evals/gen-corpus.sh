@@ -166,6 +166,9 @@ for i, v in enumerate(verbs):
 open(sys.argv[1], "w").write("\n".join(out))
 PY
 
+# --- third large file, for the cross-file scenario ---------------------------
+bash "$(dirname "$0")/gen-crossfile.sh" "$OUT"
+
 echo "corpus written to $OUT"
 find "$OUT" -type f | sort | while read -r f; do
   printf "%6s lines %8s bytes  %s\n" "$(wc -l < "$f")" "$(wc -c < "$f")" "${f#"$OUT"/}"
