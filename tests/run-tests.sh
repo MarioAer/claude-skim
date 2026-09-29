@@ -170,6 +170,27 @@ fresh
 check "head -n 20 allows"                allow "$(decision "$(bash_json "head -n 20 $BIG")")"
 
 fresh
+check "head -100 allows"                 allow "$(decision "$(bash_json "head -100 $BIG")")"
+
+fresh
+check "head -5000 denies"                deny  "$(decision "$(bash_json "head -5000 $BIG")")"
+
+fresh
+check "head -n 5000 denies"              deny  "$(decision "$(bash_json "head -n 5000 $BIG")")"
+
+fresh
+check "bare head allows (default 10)"    allow "$(decision "$(bash_json "head $BIG")")"
+
+fresh
+check "cat -n of oversized denies"       deny  "$(decision "$(bash_json "cat -n $BIG")")"
+
+fresh
+check "quoted path denies"               deny  "$(decision "$(bash_json "cat \"$BIG\"")")"
+
+fresh
+check "grep is not a bulk reader"        allow "$(decision "$(bash_json "grep -n export $BIG")")"
+
+fresh
 check "nonexistent file allows"          allow "$(decision "$(read_json "$WORK/nope.ts")")"
 
 fresh

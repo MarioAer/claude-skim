@@ -121,7 +121,9 @@ prog = os.path.basename(parts[0])
 # less and more page a whole file into the transcript just as cat does
 if prog not in ("cat", "head", "tail", "less", "more"):
     print("allow"); raise SystemExit
-m = re.search(r"-n\s*(\d+)", cmd)
+# Both spellings of the count flag. "-500" is as real as "-n 500", and
+# matching only the latter lets `head -500 big.ts` through unbounded.
+m = re.search(r"-n\s*(\d+)", cmd) or re.search(r"(?:^|\s)-(\d+)(?:\s|$)", cmd)
 if prog in ("head", "tail"):
     if m is None or int(m.group(1)) <= min_lines:
         print("allow"); raise SystemExit
