@@ -71,6 +71,35 @@ All five repetitions followed one shape: structure grep, property grep on
 Two skipped the confirmations. The token gain is secondary; the result is that
 the reps agree.
 
+### Scenario 4 — one question across three large files
+
+Built specifically to favour delegation: 2,984 lines across three files, so a
+worker avoids three whole-file reads rather than one.
+
+| | Baseline | With skill |
+| --- | --- | --- |
+| Correct (3/3 verdicts, each cited) | 5 / 5 | 5 / 5 |
+| Whole-file reads | 15 / 15 files | **0** |
+| Delegations | 0 / 5 | **0 / 5** |
+| Mean tokens | 99,092 | 71,808 |
+| Range | 98,449 – 99,999 | 70,792 – 73,549 |
+
+27.5% reduction, fully separated distributions.
+
+**Quality rose as content fell.** Four of five skill repetitions independently
+reported a defect no baseline repetition found: `cache.get` runs outside
+`withLock` in all 50 store functions, so the lock serialises only the write and
+the read-modify-write still races. The answer key said the 45 non-bypassing
+functions were correct. The repetitions were right and the key was wrong.
+
+**The skill arm was re-run.** The first attempt pointed it at `SKILL.md` inside
+this repository, which gave it a path to `evals/scenarios.md` and the
+generators; all five repetitions opened the answer key. That arm was discarded
+and re-run against an isolated copy with no path back here. The clean figures
+landed within about 2% of the contaminated ones, so the conclusion did not
+change — but that was luck, not method. `evals/README.md` now requires
+isolation and says how to verify it.
+
 ## Findings
 
 **The specification targets the wrong task shape.** Section 2 aims the plugin at
@@ -80,9 +109,17 @@ where the baseline is already correct four times in five. Section 3 excludes
 shape that fails five times in five. As specified, the plugin fires where it is
 not needed and stands down where it is.
 
-**Delegation was never chosen spontaneously.** Across 30 baseline and GREEN
-repetitions with the capability available, no agent delegated. The one
-delegation in the corpus occurred under the skill, in scenario 3.
+**The worker does not earn its place.** Scenario 4 was built to favour
+delegation and delegation was still chosen zero times out of five. Across every
+repetition run for this project, a worker has been chosen once. Outlining
+handled a 2,984-line, three-file question without it, correctly, at 27.5% less
+cost than reading everything.
+
+This resolves open question 4 of the design against the worker. The agent and
+the guard's rule 1 stay, so the escape path exists and cannot deadlock, but
+nothing further should be built around delegation: no `SubagentStart`/`Stop`
+counters, no delegation-rate metrics. skim is an outlining plugin with a
+delegation fallback, not a delegation plugin.
 
 **Observable triggers bind; interpretive ones do not.** The "over 350 lines"
 trigger is countable and fired 5/5. The original step 4 asked whether

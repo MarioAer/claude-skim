@@ -488,9 +488,15 @@ prohibit bundled executables.
    most plausible way this plugin turns out to be unnecessary.
 3. Whether generated and vendored files warrant special handling. Deferred; not in the
    first release.
-4. **Whether the Haiku worker earns its place.** The evidence so far says the
-   skill does the work and the guard catches the residue. Before building the
-   counter hooks and the report skill around delegation, the delegation path
-   itself should be measured properly — including whether a nested subagent's
-   own token usage is counted in the parent's total, which decides whether the
-   one measured delegation won or lost.
+4. ~~**Whether the Haiku worker earns its place.**~~ **CLOSED, against the
+   worker.** Scenario 4 put one question across three large files — 2,984
+   lines, the shape with the strongest possible case for delegation — and
+   delegation was chosen zero times out of five. Outlining answered it
+   correctly at 27.5% less cost than reading everything, and found a defect
+   every baseline repetition missed.
+
+   The worker and rule 1 stay so the escape path exists and cannot deadlock.
+   Nothing further is built around delegation: the `SubagentStart`/`Stop`
+   counters of section 10.1 and the delegation-rate metric are dropped, and the
+   report skill measures guard behaviour instead. skim is an outlining plugin
+   with a delegation fallback, not a delegation plugin.
