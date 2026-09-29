@@ -91,7 +91,11 @@ mkdir -p "$STATE_DIR/sessions" 2>/dev/null || allow "state-dir-unwritable"
 
 find "$STATE_DIR/sessions" -name '*.log' -mtime +7 -delete 2>/dev/null || true
 
-record() { printf '%s\t%s\t%s\n' "$1" "$2" "${3:-}" >>"$LOG" 2>/dev/null || true; }
+# <event>\t<subject>\t<value>\t<cause>. The fourth field was added for the
+# report and is optional: replay reads by index and tolerates its absence.
+record() {
+  printf '%s\t%s\t%s\t%s\n' "$1" "$2" "${3:-}" "${4:-}" >>"$LOG" 2>/dev/null || true
+}
 
 # --- edits: record and allow -------------------------------------------------
 case "$TOOL" in
@@ -138,10 +142,11 @@ for p in paths:
     except OSError:
         continue
     if nlines > min_lines or size > min_bytes:
-        print("deny"); raise SystemExit
+        print(f"deny {nlines}"); raise SystemExit
 print("allow")' "$COMMAND" "$MIN_LINES" "$MIN_BYTES" 2>/dev/null)"
+  read -r BASH_VERDICT BASH_LINES <<<"${BASH_VERDICT:-allow}"
   [ "$BASH_VERDICT" = "deny" ] || allow "bash-within-budget"
-  record deny "$COMMAND"
+  record deny "$COMMAND" "${BASH_LINES:-0}" bash
   deny "That file exceeds the reading threshold. Delegate the question to the ${WORKER_NAME} subagent, or bound the command by piping it or using head -n. If you genuinely need the whole file, re-issue this identical command and it will be permitted."
 fi
 
@@ -210,7 +215,7 @@ if [ -n "$LIMIT" ]; then
     record lines "$PATH_ARG" "$LIMIT"
     allow "bounded-within-budget"
   fi
-  record deny "$PATH_ARG"
+  record deny "$PATH_ARG" "$NLINES" budget
   deny "Cumulative reads of this file have reached the budget (${CUM} of ${MIN_LINES} lines). Reading a file in chunks costs more than reading it once. Delegate to the ${WORKER_NAME} subagent, or re-issue this identical call to take the whole file."
 fi
 
@@ -221,5 +226,5 @@ if [ "$NLINES" -le "$MIN_LINES" ] && [ "$NBYTES" -le "$MIN_BYTES" ]; then
 fi
 
 # --- rule 8: deny ------------------------------------------------------------------
-record deny "$PATH_ARG"
+record deny "$PATH_ARG" "$NLINES" threshold
 deny "This file is ${NLINES} lines / ${NBYTES} bytes, above the ${MIN_LINES}-line / ${MIN_BYTES}-byte threshold. Outline it first by grepping for declarations, then read the region you need with offset and limit; or delegate the question to the ${WORKER_NAME} subagent. If you need the full file to edit or debug it, re-issue this identical Read and it will be permitted."
