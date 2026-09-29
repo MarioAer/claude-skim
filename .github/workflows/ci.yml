@@ -1,0 +1,80 @@
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint skill frontmatter
+        run: |
+          python3 - <<'PY'
+          import pathlib, re, sys
+
+          failures = []
+          skills = sorted(pathlib.Path("skills").glob("*/SKILL.md")) if pathlib.Path("skills").is_dir() else []
+          if not skills:
+              print("no skills found; nothing to lint")
+              sys.exit(0)
+
+          for path in skills:
+              text = path.read_text()
+              match = re.match(r"^---\n(.*?)\n---\n", text, re.S)
+              if not match:
+                  failures.append(f"{path}: missing YAML frontmatter")
+                  continue
+              fm = match.group(1)
+              if len(fm) > 1024:
+                  failures.append(f"{path}: frontmatter is {len(fm)} chars, limit is 1024")
+
+              name = re.search(r"^name:\s*(.+)$", fm, re.M)
+              desc = re.search(r"^description:\s*(.+)$", fm, re.M)
+
+              if not name:
+                  failures.append(f"{path}: frontmatter has no 'name'")
+              else:
+                  value = name.group(1).strip()
+                  if not re.fullmatch(r"[a-z0-9-]+", value):
+                      failures.append(f"{path}: name '{value}' must be lowercase letters, digits and hyphens")
+                  if value != path.parent.name:
+                      failures.append(f"{path}: name '{value}' does not match directory '{path.parent.name}'")
+
+              if not desc:
+                  failures.append(f"{path}: frontmatter has no 'description'")
+              elif not desc.group(1).strip().lower().startswith("use when"):
+                  failures.append(f"{path}: description should start with 'Use when'")
+
+              print(f"checked {path}")
+
+          if failures:
+              print("\nFAILURES:")
+              for f in failures:
+                  print(f"  - {f}")
+              sys.exit(1)
+          print(f"\n{len(skills)} skill(s) passed")
+          PY
+
+      - name: ShellCheck
+        if: hashFiles('**/*.sh') != ''
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq shellcheck
+          find . -name '*.sh' -not -path './.git/*' -print0 | xargs -0 shellcheck
+
+      - name: Guard fixture suite
+        if: hashFiles('tests/run-tests.sh') != ''
+        run: bash tests/run-tests.sh
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Validate plugin manifest and components
+        run: claude plugin validate . --strict
