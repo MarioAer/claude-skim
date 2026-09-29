@@ -86,7 +86,25 @@ Observed keys, which are a superset of what the spec assumes:
 `tool_use_id` is also available and is a more precise deduplication key than
 the file path for identifying a repeated call.
 
-## 5. Consequences for the design
+## 5. Integration, with the plugin actually loaded
+
+Verified by running a session with `claude --plugin-dir <repo>`.
+
+- `agent_type` for a plugin-provided agent is **`skim:bulk-reader`**, the
+  scoped form the spec predicted. The guard matches this and the bare
+  `bulk-reader`, so both installation styles work.
+- An inline plugin's data directory is `~/.claude/plugins/data/<name>-inline`,
+  not `<name>`. An exported `CLAUDE_PLUGIN_DATA` did not override it.
+- **A hook that fails to start is fail-open.** When the data directory could not
+  be created, Claude Code logged
+  `Hook failed to run (PreToolUse:Read): EPERM` and ran the tool anyway. Rule 9
+  therefore holds even for failures that occur before the guard's own code runs,
+  which is the desired behaviour but is the runtime's doing, not the script's.
+- With the plugin loaded whole, the model read the target region directly and
+  the guard never had to deny. The skill and the guard are complementary: the
+  skill prevents the read, the guard catches what the skill misses.
+
+## 6. Consequences for the design
 
 - Rule 4 is sound. The toll mechanism works and the instruction is delivered.
 - Section 6's denial output shape is wrong as written and must be nested.
