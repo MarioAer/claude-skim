@@ -28,9 +28,10 @@ says why. Re-issue the identical call and it is permitted: a one-round-trip
 toll, not a wall. Files you have already edited, bounded reads within budget,
 binaries, and piped `cat`/`head` are never blocked.
 
-**A worker** (`bulk-reader`, pinned to Haiku) for questions that still need the
-whole file. It answers with `path:line` anchors *and* the verbatim lines, so
-citations are checkable.
+**A worker** (`bulk-reader`, pinned to Haiku) as a fallback for the rare file
+that outlining cannot reduce. It answers with `path:line` anchors *and* the
+verbatim lines, so citations are checkable. In practice it is almost never
+needed — see below.
 
 If anything malfunctions — missing file, unwritable state, malformed input — the
 read is allowed. A plugin that breaks your session is worse than no plugin.
@@ -43,18 +44,25 @@ Measured in this repository, five repetitions per arm, Claude Sonnet:
 | --- | --- | --- |
 | Retrieval, answer is a greppable string | 1 / 5 | 0 / 5 |
 | Comprehension, no string to search for | 5 / 5 | 0 / 5 |
+| One question across three large files | 15 / 15 files | 0 |
 
-On the comprehension task mean tokens fell from 78,182 to 57,582, with no
-overlap between the two sets and no loss of answer quality.
+Mean tokens fell 26% on the comprehension task and 27% on the three-file one,
+with no overlap between the two sets in either case and no loss of answer
+quality. On the three-file task the skill arm was *more* accurate: it found a
+race condition every baseline run missed.
 
 Read [`docs/benchmark.md`](docs/benchmark.md) before trusting those numbers. It
-lists what the measurement does not cover.
+lists what the measurement does not cover, and records a contaminated run that
+had to be discarded.
 
 **Two honest caveats.** The `Explore` subagent plus a project instruction has
 not been benchmarked against this plugin, and it remains the most plausible way
-`skim` turns out to be unnecessary. And the Haiku worker is the least justified
-part: outlining removed every whole-file read on its own, and no agent chose to
-delegate in 30 baseline runs.
+`skim` turns out to be unnecessary.
+
+And the worker has not earned its place. The three-file scenario was built to
+favour delegation and delegation was chosen zero times out of five; outlining
+handled it. The worker stays as a fallback, but skim is an outlining plugin,
+not a delegation one.
 
 ## Requirements
 
